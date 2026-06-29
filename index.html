@@ -885,6 +885,7 @@ function renderCharts(data){
 function allMonths(data){
   return [...new Set(data.map(d=>getYM(d.date)))].sort();
 }
+function shortMonth(ym){ return ym.substring(2); }
 
 function renderMonthlyChart(data){
   destroyChart('monthly');
@@ -894,7 +895,7 @@ function renderMonthlyChart(data){
   charts['monthly'] = new Chart(document.getElementById('chartMonthly'),{
     type:'bar',
     data:{
-      labels: months,
+      labels: months.map(shortMonth),
       datasets:[
         {label:'1공장', data:f1,
          backgroundColor: ctx=>mkGrad(ctx.chart, lightenHex(BLUE), BLUE),
@@ -1042,7 +1043,7 @@ function renderF1MonthlyChart(data){
   charts['f1m'] = new Chart(document.getElementById('chartF1Monthly'),{
     type:'bar',
     data:{
-      labels: months,
+      labels: months.map(shortMonth),
       datasets: cats.map((c,i)=>({
         label: c,
         data: months.map(m=>data.filter(d=>getYM(d.date)===m&&getItemCat(d.item)===c).reduce((s,d)=>s+d.qty,0)),
@@ -1076,7 +1077,7 @@ function renderF2MonthlyChart(data){
   charts['f2m'] = new Chart(document.getElementById('chartF2Monthly'),{
     type:'bar',
     data:{
-      labels: months,
+      labels: months.map(shortMonth),
       datasets: cats.map((c,i)=>({
         label: c,
         data: months.map(m=>data.filter(d=>getYM(d.date)===m&&getItemCat(d.item)===c).reduce((s,d)=>s+d.qty,0)),
