@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>창원공장 소모품 발주 현황</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', '맑은 고딕', Arial, sans-serif; background: #f0f2f5; color: #222; }
+
+  .header {
+    background: linear-gradient(135deg, #1a3a6b 0%, #2563b0 100%);
+    color: #fff;
+    padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .header .subtitle { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+  .header-badge {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+  }
+
+  /* Tab */
+  .tab-bar {
+    display: flex;
+    background: #fff;
+    border-bottom: 2px solid #e0e6f0;
+    padding: 0 32px;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 14px 28px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all .2s;
+  }
+  .tab-btn.active { color: #2563b0; border-bottom-color: #2563b0; background: transparent; }
+  .tab-btn:hover:not(.active) { color: #333; background: #f5f7fa; }
+
+  /* Filter bar */
+  .filter-bar {
+    background: #fff;
+    border-bottom: 1px solid #e0e6f0;
+    padding: 12px 32px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .filter-bar label { font-size: 13px; color: #555; font-weight: 600; }
+  .filter-bar select {
+    padding: 6px 12px; border: 1px solid #c8d4e8; border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: #f8fafd; cursor: pointer;
+  }
+  .filter-bar select:focus { outline: none; border-color: #2563b0; }
+  .reset-btn {
+    padding: 6px 14px; background: #e8effa; color: #2563b0; border: 1px solid #c8d4e8;
+    border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .reset-btn:hover { background: #d0dff5; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ===== 숫자 현황판 ===== */
+  .section { padding: 24px 32px; }
+
+  /* KPI cards */
+  .kpi-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .kpi-card {
+    flex: 1; min-width: 160px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    border-left: 4px solid #2563b0;
+    position: relative;
+  }
+  .kpi-card.green { border-left-color: #16a34a; }
+  .kpi-card.orange { border-left-color: #ea580c; }
+  .kpi-card.purple { border-left-color: #7c3aed; }
+  .kpi-card.red { border-left-color: #dc2626; }
+  .kpi-card .label { font-size: 12px; color: #888; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.3px; }
+  .kpi-card .value { font-size: 28px; font-weight: 800; color: #1a1a1a; }
+  .kpi-card .unit { font-size: 13px; color: #888; font-weight: 400; }
+  .kpi-card .sub { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .kpi-card { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(37,99,176,0.18); }
+  .kpi-card.active { outline: 2.5px solid #2563b0; box-shadow: 0 4px 16px rgba(37,99,176,0.25); }
+  .kpi-card.green.active { outline-color: #16a34a; }
+  .kpi-card.orange.active { outline-color: #ea580c; }
+  .kpi-card.purple.active { outline-color: #7c3aed; }
+  .kpi-card.red.active { outline-color: #dc2626; }
+  .section-highlight { animation: highlight-fade 1.2s ease; }
+  @keyframes highlight-fade { 0%{background:#dbeafe;} 100%{background:transparent;} }
+
+  /* Tables */
+  .table-section { margin-bottom: 24px; }
+  .table-section h2 {
+    font-size: 15px; font-weight: 700; color: #1a3a6b;
+    margin-bottom: 12px; padding-left: 10px;
+    border-left: 3px solid #2563b0;
+  }
+  .table-wrap { background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: #1a3a6b; color: #fff; }
+  thead th { padding: 11px 14px; text-align: center; font-weight: 600; font-size: 12px; letter-spacing: 0.3px; }
+  tbody tr { border-bottom: 1px solid #f0f2f5; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f5f8ff; }
+  tbody td { padding: 10px 14px; text-align: center; color: #333; }
+  tbody td.left { text-align: left; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+  }
+  .badge-f1 { background: #dbeafe; color: #1d4ed8; }
+  .badge-f2 { background: #fef3c7; color: #b45309; }
+
+  .total-row { background: #f0f6ff !important; font-weight: 700; }
+  .total-row td { color: #1a3a6b; }
+
+  /* ===== 인사이트 바 ===== */
+  .insight-bar {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;
+  }
+  .insight-item { flex: 1; min-width: 220px; }
+  .insight-item .itag {
+    display: inline-block; background: #2563b0; color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    margin-bottom: 5px; letter-spacing: 0.5px;
+  }
+  .insight-item .itext { font-size: 13px; color: #1e3a5f; line-height: 1.6; }
+  .insight-item .itext b { color: #2563b0; }
+
+  /* ===== 그래프 현황판 ===== */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .chart-card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    padding: 20px 24px;
+  }
+  .chart-card.full { grid-column: 1 / -1; }
+  .chart-card h3 { font-size: 14px; font-weight: 700; color: #1a3a6b; margin-bottom: 16px; }
+  .chart-container { position: relative; height: 260px; }
+  .chart-container.tall { height: 320px; }
+
+  @media (max-width: 900px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .chart-card.full { grid-column: 1; }
+    .section { padding: 16px; }
+    .kpi-row { gap: 10px; }
+    .kpi-card { min-width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="h1">🏭 창원공장 소모품 발주 현황</div>
+    <div class="subtitle">소모품 신청 현황 대시보드 | 데이터 기준: 2025.03 ~ 2026.06</div>
+  </div>
+  <div class="header-badge">창원공장 소모품 관리</div>
+</div>
+<style>.header .h1{font-size:22px;font-weight:700;}</style>
+
+<!-- Filter -->
+<div class="filter-bar">
+  <label>공장</label>
+  <select id="filterFactory">
+    <option value="all">전체</option>
+    <option value="1공장">1공장</option>
+    <option value="2공장">2공장</option>
+  </select>
+  <label>기간</label>
+  <select id="filterYear">
+    <option value="all">전체</option>
+    <option value="2025">2025년</option>
+    <option value="2026">2026년</option>
+  </select>
+  <label>시작월</label>
+  <select id="filterMonth">
+    <option value="all">전체 월</option>
+    <option value="01">1월</option><option value="02">2월</option>
+    <option value="03">3월</option><option value="04">4월</option>
+    <option value="05">5월</option><option value="06">6월</option>
+    <option value="07">7월</option><option value="08">8월</option>
+    <option value="09">9월</option><option value="10">10월</option>
+    <option value="11">11월</option><option value="12">12월</option>
+  </select>
+  <span style="color:#888;font-size:13px;margin:0 2px">~</span>
+  <label>종료월</label>
+  <select id="filterMonthEnd">
+    <option value="all">전체 월</option>
+    <option value="01">1월</option><option value="02">2월</option>
+    <option value="03">3월</option><option value="04">4월</option>
+    <option value="05">5월</option><option value="06">6월</option>
+    <option value="07">7월</option><option value="08">8월</option>
+    <option value="09">9월</option><option value="10">10월</option>
+    <option value="11">11월</option><option value="12">12월</option>
+  </select>
+  <label>부서</label>
+  <select id="filterDept">
+    <option value="all">전체</option>
+  </select>
+  <label>품목</label>
+  <select id="filterItem">
+    <option value="all">전체</option>
+  </select>
+  <button class="reset-btn" onclick="resetFilters()">초기화</button>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('num', this)">📊 숫자 현황판</button>
+  <button class="tab-btn" onclick="switchTab('chart', this)">📈 그래프 현황판</button>
+</div>
+
+<!-- ===== 숫자 현황판 ===== -->
+<div id="tab-num" class="tab-content active">
+  <div class="section">
+
+    <!-- 인사이트 -->
+    <div class="insight-bar" id="insight-bar"></div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi-card" onclick="kpiClick('all')" id="kpi-card-all">
+        <div class="label">총 신청 건수</div>
+        <div class="value" id="kpi-total">0</div>
+        <div class="sub">전체 품목 신청 행</div>
+      </div>
+      <div class="kpi-card green" onclick="kpiClick('f1')" id="kpi-card-f1">
+        <div class="label">1공장 신청 수량</div>
+        <div class="value" id="kpi-f1">0</div>
+        <div class="unit">건</div>
+      </div>
+      <div class="kpi-card orange" onclick="kpiClick('f2')" id="kpi-card-f2">
+        <div class="label">2공장 신청 수량</div>
+        <div class="value" id="kpi-f2">0</div>
+        <div class="unit">건</div>
+      </div>
+      <div class="kpi-card purple" onclick="kpiClick('dept')" id="kpi-card-dept">
+        <div class="label">신청 부서 수</div>
+        <div class="value" id="kpi-dept">0</div>
+        <div class="unit">개 부서</div>
+      </div>
+      <div class="kpi-card red" onclick="kpiClick('item')" id="kpi-card-item">
+        <div class="label">신청 품목 종류</div>
+        <div class="value" id="kpi-item">0</div>
+        <div class="unit">종</div>
+      </div>
+    </div>
+
+    <!-- 커피믹스 소모량 (T수) -->
+    <div class="table-section">
+      <h2>☕ 커피믹스 소모량 (1box = 210T 기준)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>년월</th><th>1공장 (box)</th><th>1공장 (T수)</th><th>2공장 (box)</th><th>2공장 (T수)</th><th>합계 (box)</th><th>합계 (T수)</th></tr></thead>
+          <tbody id="tbl-coffee"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 공장별 요약 -->
+    <div class="table-section">
+      <h2>공장별 신청 수량 요약</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>공장</th><th>총 신청건</th><th>커피믹스 (box)</th><th>원두커피 (pack)</th><th>종이컵 (box)</th><th>종이컵(큰컵)</th><th>기타</th></tr></thead>
+          <tbody id="tbl-factory"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 부서별 -->
+    <div class="table-section">
+      <h2>부서별 신청 현황</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>공장</th><th>부서</th><th>신청 건수</th><th>커피믹스 (box)</th><th>원두커피 (pack)</th><th>종이컵 (box)</th><th>종이컵(큰컵)</th><th>기타</th></tr></thead>
+          <tbody id="tbl-dept"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 월별 -->
+    <div class="table-section">
+      <h2>월별 신청 현황</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>년월</th><th>공장</th><th>신청 건수</th><th>커피믹스 (box)</th><th>원두커피 (pack)</th><th>종이컵 (box)</th><th>종이컵(큰컵)</th><th>기타</th></tr></thead>
+          <tbody id="tbl-month"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 품목별 -->
+    <div class="table-section">
+      <h2>품목별 신청 수량</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>품목</th><th>단위</th><th>1공장 수량</th><th>2공장 수량</th><th>합계</th></tr></thead>
+          <tbody id="tbl-item"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 상세 내역 -->
+    <div class="table-section">
+      <h2>전체 신청 상세 내역</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>공장</th><th>요청일자</th><th>부서</th><th>작성자</th><th>품목</th><th>수량</th><th>단위</th></tr></thead>
+
+          <tbody id="tbl-detail"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== 그래프 현황판 ===== -->
+<div id="tab-chart" class="tab-content">
+  <div class="section">
+    <div class="chart-grid">
+
+      <div class="chart-card full">
+        <h3>📅 월별 신청 건수 추이 (1공장 vs 2공장)</h3>
+        <div class="chart-container tall"><canvas id="chartMonthly"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>🏢 부서별 신청 건수</h3>
+        <div class="chart-container tall"><canvas id="chartDept"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>📦 품목별 수량 비중</h3>
+        <div class="chart-container tall"><canvas id="chartItem"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>🏭 공장별 품목 수량 비교</h3>
+        <div class="chart-container tall"><canvas id="chartFactory"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>📊 월별 수량 (1공장)</h3>
+        <div class="chart-container"><canvas id="chartF1Monthly"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>📊 월별 수량 (2공장)</h3>
+        <div class="chart-container"><canvas id="chartF2Monthly"></canvas></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== RAW DATA ==========
+const rawData = [
+  // 1공장
+  {f:"1공장",date:"2025-03-19",dept:"SCM팀",writer:"정수환",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-03-19",dept:"종합사무실",writer:"",item:"종이컵",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-06-18",dept:"SCM팀",writer:"정수환",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-06-18",dept:"종합사무실",writer:"",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2025-07-08",dept:"SCM팀",writer:"정수환",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2025-07-22",dept:"자재2팀",writer:"이현석",item:"종이컵(큰컵)",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-08-11",dept:"SCM팀",writer:"정선용",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-09-01",dept:"SCM팀",writer:"정수환",item:"종이컵(큰컵)",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-09-01",dept:"종합사무실",writer:"",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2025-09-01",dept:"종합사무실",writer:"",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2025-10-01",dept:"SCM팀",writer:"정수환",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-10-01",dept:"종합사무실",writer:"",item:"종이컵(큰컵)",qty:5,unit:"줄"},
+  {f:"1공장",date:"2025-10-01",dept:"영업2팀",writer:"장원혁",item:"커피믹스",qty:4,unit:"box"},
+  {f:"1공장",date:"2025-10-01",dept:"출하사무실/엘지상주",writer:"",item:"종이컵",qty:2,unit:"box"},
+  {f:"1공장",date:"2025-10-27",dept:"생산2팀",writer:"최정은",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2025-10-27",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-10-27",dept:"생산2팀",writer:"",item:"종이컵(큰컵)",qty:4,unit:"줄"},
+  {f:"1공장",date:"2025-11-06",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2025-11-06",dept:"금형2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-11-06",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-11-06",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-11-10",dept:"영업2팀",writer:"전성용",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2025-11-10",dept:"종합사무실",writer:"",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-11-10",dept:"종합사무실",writer:"",item:"종이컵",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-11-10",dept:"종합사무실",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2025-11-27",dept:"생산2팀",writer:"박미연",item:"정수기컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-11-26",dept:"생산2팀",writer:"최정은",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-11-26",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2025-11-26",dept:"생산2팀",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2025-12-10",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2025-12-04",dept:"영업2팀",writer:"장원혁",item:"커피믹스",qty:4,unit:"box"},
+  {f:"1공장",date:"2025-12-11",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2025-12-11",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-01-06",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-01-06",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-01-08",dept:"SCM팀",writer:"정수환",item:"커피믹스",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-01-08",dept:"종합사무실",writer:"",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2026-01-08",dept:"종합사무실",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2026-01-13",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-01-13",dept:"금형2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-01-21",dept:"영업2팀",writer:"장원혁",item:"커피믹스",qty:4,unit:"box"},
+  {f:"1공장",date:"2026-01-21",dept:"출하사무실/엘지상주",writer:"",item:"종이컵",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-01-21",dept:"생산2팀",writer:"이정은",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-01-21",dept:"생산2팀",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2026-01-27",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-02-19",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-02-19",dept:"금형2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-02-20",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-02-20",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-02-20",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-02-20",dept:"생산2팀",writer:"",item:"정수기컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-02-20",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-02-23",dept:"영업2팀",writer:"김현빈",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-02-23",dept:"영업2팀",writer:"",item:"원두커피",qty:4,unit:"pack"},
+  {f:"1공장",date:"2026-02-23",dept:"영업2팀",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2026-03-04",dept:"영업2팀",writer:"장원혁",item:"커피믹스",qty:4,unit:"box"},
+  {f:"1공장",date:"2026-03-18",dept:"SCM팀",writer:"정수환",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-03-18",dept:"종합사무실",writer:"",item:"원두커피",qty:2,unit:"pack"},
+  {f:"1공장",date:"2026-03-18",dept:"종합사무실",writer:"",item:"종이컵(큰컵)",qty:4,unit:"줄"},
+  {f:"1공장",date:"2026-03-19",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-03-19",dept:"생산2팀",writer:"박미연",item:"정수기종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-03-23",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-03-23",dept:"생산2팀",writer:"",item:"정수기종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-04-07",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-04-07",dept:"금형2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-04-08",dept:"생산2팀",writer:"이정은",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2026-04-15",dept:"생산2팀",writer:"이정은",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-04-15",dept:"영업2팀",writer:"이영민",item:"커피믹스",qty:4,unit:"box"},
+  {f:"1공장",date:"2026-04-15",dept:"출하사무실/엘지상주",writer:"",item:"종이컵",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-04-20",dept:"원가팀",writer:"이동헌",item:"커피믹스",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-04-20",dept:"종합사무실",writer:"",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2026-04-20",dept:"종합사무실",writer:"",item:"종이컵(큰컵)",qty:2,unit:"줄"},
+  {f:"1공장",date:"2026-04-29",dept:"자재2팀",writer:"이현석",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"1공장",date:"2026-05-14",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-05-06",dept:"영업2팀",writer:"장원혁",item:"커피믹스",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-05-06",dept:"출하사무실/엘지상주",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-05-21",dept:"생산2팀",writer:"박미연",item:"커피믹스",qty:3,unit:"box"},
+  {f:"1공장",date:"2026-05-21",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-06-04",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-06-04",dept:"금형2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-06-04",dept:"금형2팀",writer:"",item:"종이컵(큰컵)",qty:2,unit:"줄"},
+  {f:"1공장",date:"2026-06-17",dept:"영업2팀",writer:"이영민",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-06-17",dept:"영업2팀",writer:"김현빈",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-06-17",dept:"종합사무실",writer:"",item:"원두커피",qty:3,unit:"pack"},
+  {f:"1공장",date:"2026-06-17",dept:"종합사무실",writer:"",item:"종이컵(큰컵)",qty:2,unit:"줄"},
+  {f:"1공장",date:"2026-06-23",dept:"금형2팀",writer:"이충효",item:"커피믹스",qty:2,unit:"box"},
+  {f:"1공장",date:"2026-06-23",dept:"금형2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"1공장",date:"2026-06-23",dept:"생산2팀",writer:"이정은",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  // 2공장
+  {f:"2공장",date:"2025-10-01",dept:"영업2팀",writer:"강태웅",item:"커피믹스",qty:4,unit:"box"},
+  {f:"2공장",date:"2025-10-01",dept:"영업2팀",writer:"",item:"원두커피",qty:5,unit:"pack"},
+  {f:"2공장",date:"2025-10-01",dept:"영업2팀",writer:"",item:"종이컵",qty:2,unit:"box"},
+  {f:"2공장",date:"2025-10-01",dept:"영업2팀",writer:"",item:"종이컵(큰컵)",qty:5,unit:"줄"},
+  {f:"2공장",date:"2025-10-01",dept:"영업2팀",writer:"",item:"정수기종이컵",qty:1,unit:"box"},
+  {f:"2공장",date:"2025-10-24",dept:"품질보증2팀",writer:"서정일",item:"커피믹스",qty:3,unit:"box"},
+  {f:"2공장",date:"2025-10-24",dept:"품질보증2팀",writer:"",item:"종이컵",qty:3,unit:"box"},
+  {f:"2공장",date:"2025-11-04",dept:"자재2팀",writer:"이성민",item:"원두커피",qty:7,unit:"pack"},
+  {f:"2공장",date:"2025-11-04",dept:"자재2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"2공장",date:"2025-11-04",dept:"자재2팀",writer:"",item:"종이컵(큰컵)",qty:5,unit:"줄"},
+  {f:"2공장",date:"2025-12-02",dept:"품질보증2팀",writer:"서정일",item:"커피믹스",qty:4,unit:"box"},
+  {f:"2공장",date:"2025-12-02",dept:"품질보증2팀",writer:"",item:"원두커피",qty:7,unit:"pack"},
+  {f:"2공장",date:"2025-12-02",dept:"품질보증2팀",writer:"",item:"종이컵",qty:3,unit:"box"},
+  {f:"2공장",date:"2025-12-04",dept:"영업2팀",writer:"장원혁",item:"커피믹스",qty:4,unit:"box"},
+  {f:"2공장",date:"2025-12-18",dept:"품질보증2팀",writer:"서정일",item:"종이컵(큰컵)",qty:2,unit:"줄"},
+  {f:"2공장",date:"2026-01-06",dept:"구매팀",writer:"김희정",item:"커피믹스",qty:4,unit:"box"},
+  {f:"2공장",date:"2026-01-06",dept:"구매팀",writer:"",item:"원두커피",qty:7,unit:"pack"},
+  {f:"2공장",date:"2026-01-06",dept:"구매팀",writer:"",item:"종이컵",qty:3,unit:"box"},
+  {f:"2공장",date:"2026-01-06",dept:"구매팀",writer:"",item:"종이컵(큰컵)",qty:2,unit:"줄"},
+  {f:"2공장",date:"2026-01-16",dept:"생산2팀",writer:"박선우",item:"커피믹스",qty:4,unit:"box"},
+  {f:"2공장",date:"2026-01-16",dept:"생산2팀",writer:"",item:"종이컵",qty:1,unit:"box"},
+  {f:"2공장",date:"2026-01-16",dept:"생산2팀",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"2공장",date:"2026-01-30",dept:"개발팀",writer:"정병건",item:"커피믹스",qty:8,unit:"box"},
+  {f:"2공장",date:"2026-01-30",dept:"개발팀",writer:"",item:"원두커피",qty:10,unit:"pack"},
+  {f:"2공장",date:"2026-01-30",dept:"개발팀",writer:"",item:"종이컵",qty:3,unit:"box"},
+  {f:"2공장",date:"2026-01-30",dept:"개발팀",writer:"",item:"종이컵(큰컵)",qty:3,unit:"줄"},
+  {f:"2공장",date:"2026-03-06",dept:"생산2팀",writer:"박곡정",item:"커피믹스",qty:5,unit:"box"},
+  {f:"2공장",date:"2026-03-06",dept:"생산2팀",writer:"",item:"원두커피",qty:7,unit:"pack"},
+  {f:"2공장",date:"2026-03-06",dept:"생산2팀",writer:"",item:"종이컵",qty:5,unit:"box"},
+  {f:"2공장",date:"2026-03-06",dept:"생산2팀",writer:"",item:"종이컵(큰컵)",qty:5,unit:"줄"},
+  {f:"2공장",date:"2026-04-03",dept:"영업2팀",writer:"강태웅",item:"커피믹스",qty:5,unit:"box"},
+  {f:"2공장",date:"2026-04-03",dept:"영업2팀",writer:"",item:"원두커피",qty:5,unit:"pack"},
+  {f:"2공장",date:"2026-04-03",dept:"영업2팀",writer:"",item:"종이컵",qty:2,unit:"box"},
+  {f:"2공장",date:"2026-04-03",dept:"영업2팀",writer:"",item:"종이컵(큰컵)",qty:10,unit:"줄"},
+  {f:"2공장",date:"2026-04-27",dept:"영업2팀",writer:"전성용",item:"커피믹스",qty:5,unit:"box"},
+  {f:"2공장",date:"2026-05-21",dept:"자재2팀",writer:"박지영",item:"커피믹스",qty:5,unit:"box"},
+  {f:"2공장",date:"2026-05-21",dept:"자재2팀",writer:"",item:"원두커피",qty:3,unit:"pack"},
+  {f:"2공장",date:"2026-05-21",dept:"자재2팀",writer:"",item:"종이컵(큰컵)",qty:10,unit:"줄"},
+  {f:"2공장",date:"2026-05-28",dept:"자재2팀",writer:"김지환",item:"원두커피",qty:1,unit:"pack"},
+  {f:"2공장",date:"2026-06-02",dept:"품질보증2팀",writer:"서정일",item:"커피믹스",qty:5,unit:"box"},
+  {f:"2공장",date:"2026-06-02",dept:"품질보증2팀",writer:"",item:"원두커피",qty:5,unit:"pack"},
+  {f:"2공장",date:"2026-06-02",dept:"품질보증2팀",writer:"",item:"종이컵",qty:2,unit:"box"},
+  {f:"2공장",date:"2026-06-02",dept:"품질보증2팀",writer:"",item:"종이컵(큰컵)",qty:2,unit:"줄"},
+  {f:"2공장",date:"2026-06-23",dept:"품질보증2팀",writer:"서정일",item:"원두커피",qty:5,unit:"pack"},
+];
+
+// ========== WRITER FILL ==========
+// 빈 작성자: 같은 공장+날짜+부서 그룹의 이전 작성자 자동 적용
+(function(){
+  const wMap = {};
+  rawData.forEach(d => {
+    const k = d.f + '|' + d.date + '|' + d.dept;
+    if(d.writer) wMap[k] = d.writer;
+    else d.writer = wMap[k] || '';
+  });
+})();
+
+// ========== HELPERS ==========
+function getYM(date){ return date.substring(0,7); }
+function getY(date){ return date.substring(0,4); }
+function getM(date){ return date.substring(5,7); }
+
+function normalizeItem(item){
+  const n = item.trim();
+  if(n.includes('종이컵(큰컵)')||n.includes('정수기종이컵')||n.includes('종이컵(큰')||n==='정수기컵'||n==='정수기 컵') return '기타컵류';
+  if(n==='종이컵') return '종이컵';
+  if(n.includes('커피믹스')) return '커피믹스';
+  if(n.includes('원두커피')) return '원두커피';
+  return '기타';
+}
+
+const ITEMS_KEY = ['커피믹스','원두커피','종이컵','종이컵(큰컵)'];
+function getItemCat(item){
+  const n = item.trim();
+  if(n.includes('커피믹스')) return '커피믹스';
+  if(n.includes('원두커피')) return '원두커피';
+  if(n==='종이컵') return '종이컵';
+  if(n.includes('큰컵')||n.includes('정수기')||n.includes('정수기컵')) return '종이컵(큰컵)';
+  return '기타';
+}
+
+// ========== FILTER STATE ==========
+let filteredData = [...rawData];
+
+function getFilters(){
+  return {
+    factory: document.getElementById('filterFactory').value,
+    year: document.getElementById('filterYear').value,
+    month: document.getElementById('filterMonth').value,
+    dept: document.getElementById('filterDept').value,
+    item: document.getElementById('filterItem').value,
+  };
+}
+
+function applyFilters(){
+  const f = getFilters();
+  const mEnd = document.getElementById('filterMonthEnd').value;
+  filteredData = rawData.filter(d=>{
+    if(f.factory!=='all' && d.f!==f.factory) return false;
+    if(f.year!=='all' && getY(d.date)!==f.year) return false;
+    const dm = getM(d.date);
+    if(f.month!=='all' || mEnd!=='all'){
+      const s = f.month==='all' ? '01' : f.month;
+      const e = mEnd==='all' ? '12' : mEnd;
+      if(s <= e){ if(dm < s || dm > e) return false; }
+      else      { if(dm > e && dm < s) return false; }
+    }
+    if(f.dept!=='all' && d.dept!==f.dept) return false;
+    if(f.item!=='all' && getItemCat(d.item)!==f.item) return false;
+    return true;
+  });
+  renderAll();
+}
+
+function resetFilters(){
+  ['filterFactory','filterYear','filterMonth','filterMonthEnd','filterDept','filterItem']
+    .forEach(id=>document.getElementById(id).value='all');
+  setKpiActive('all');
+  applyFilters();
+}
+
+// Populate dept/item dropdowns
+function initDropdowns(){
+  const depts = [...new Set(rawData.map(d=>d.dept))].sort();
+  const deptSel = document.getElementById('filterDept');
+  depts.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; deptSel.appendChild(o); });
+
+  const itemSel = document.getElementById('filterItem');
+  ['커피믹스','원두커피','종이컵','종이컵(큰컵)','기타'].forEach(i=>{
+    const o=document.createElement('option'); o.value=i; o.textContent=i; itemSel.appendChild(o);
+  });
+
+  ['filterFactory','filterYear','filterMonth','filterMonthEnd','filterDept','filterItem']
+    .forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
+}
+
+// ========== INSIGHT ==========
+function renderInsight(data){
+  const f = getFilters();
+
+  // 현재 필터 컨텍스트 레이블
+  let ctxParts = [];
+  if(f.factory !== 'all') ctxParts.push(f.factory);
+  if(f.dept !== 'all') ctxParts.push(f.dept);
+  if(f.item !== 'all') ctxParts.push(f.item);
+  if(f.year !== 'all') ctxParts.push(f.year + '년');
+  const ctxLabel = ctxParts.length ? ctxParts.join(' · ') : '';
+
+  const coffee = data.filter(d=>d.item.includes('커피믹스'));
+  const coffeeF1box = coffee.filter(d=>d.f==='1공장').reduce((s,d)=>s+d.qty,0);
+  const coffeeF2box = coffee.filter(d=>d.f==='2공장').reduce((s,d)=>s+d.qty,0);
+  const wonduF1 = data.filter(d=>d.item.includes('원두커피')&&d.f==='1공장').reduce((s,d)=>s+d.qty,0);
+  const wonduF2 = data.filter(d=>d.item.includes('원두커피')&&d.f==='2공장').reduce((s,d)=>s+d.qty,0);
+  const totalBox = coffeeF1box + coffeeF2box;
+  const totalT = totalBox * 210;
+  const totalCount = data.length;
+  const totalQty = data.reduce((s,d)=>s+d.qty,0);
+
+  // 최다 부서
+  const deptMap={};
+  data.forEach(d=>{ deptMap[d.dept]=(deptMap[d.dept]||0)+1; });
+  const topDept = Object.entries(deptMap).sort((a,b)=>b[1]-a[1])[0]||['',0];
+  const deptCount = Object.keys(deptMap).length;
+
+  // 최다 품목
+  const itemMap={};
+  data.forEach(d=>{ const c=getItemCat(d.item); itemMap[c]=(itemMap[c]||0)+d.qty; });
+  const topItem = Object.entries(itemMap).sort((a,b)=>b[1]-a[1])[0]||['',0];
+
+  // 최대 소비월
+  const monthMap={};
+  coffee.forEach(d=>{ const ym=getYM(d.date); monthMap[ym]=(monthMap[ym]||0)+d.qty; });
+  const peakEntry = Object.entries(monthMap).sort((a,b)=>b[1]-a[1])[0]||['',0];
+
+  const ratio = coffeeF2box>0 ? (coffeeF1box/coffeeF2box).toFixed(1) : (coffeeF1box>0?'전량':'−');
+
+  let evalText, trendText;
+
+  if(f.factory==='1공장' && f.dept==='all' && f.item==='all'){
+    evalText = `<b>1공장</b> 총 <b>${totalCount}건 / ${totalQty}개</b> 신청. 커피믹스 <b>${coffeeF1box}box (${(coffeeF1box*210).toLocaleString()}T)</b> 소모.<br>최다 신청 부서: <b>${topDept[0]}</b>(${topDept[1]}건) · 최다 품목: <b>${topItem[0]}</b>(${topItem[1]}개)`;
+    trendText = `커피믹스 최대 신청월 <b>${peakEntry[0]||'−'}</b>(${peakEntry[1]}box) · 원두커피 <b>${wonduF1}pack</b> · 신청 부서 <b>${deptCount}개</b>`;
+  } else if(f.factory==='2공장' && f.dept==='all' && f.item==='all'){
+    evalText = `<b>2공장</b> 총 <b>${totalCount}건 / ${totalQty}개</b> 신청. 커피믹스 <b>${coffeeF2box}box (${(coffeeF2box*210).toLocaleString()}T)</b> 소모.<br>최다 신청 부서: <b>${topDept[0]}</b>(${topDept[1]}건) · 최다 품목: <b>${topItem[0]}</b>(${topItem[1]}개)`;
+    trendText = `커피믹스 최대 신청월 <b>${peakEntry[0]||'−'}</b>(${peakEntry[1]}box) · 원두커피 <b>${wonduF2}pack</b> · 신청 부서 <b>${deptCount}개</b>`;
+  } else if(f.dept !== 'all'){
+    evalText = `<b>${f.dept}</b> 총 <b>${totalCount}건 / ${totalQty}개</b> 신청. 최다 품목: <b>${topItem[0]}</b>(${topItem[1]}개).`;
+    trendText = `커피믹스 <b>${totalBox}box</b> · 원두커피 <b>${wonduF1+wonduF2}pack</b> · 최대 신청월 <b>${peakEntry[0]||'−'}</b>(${peakEntry[1]}box)`;
+  } else if(f.item !== 'all'){
+    const f1qty = data.filter(d=>d.f==='1공장').reduce((s,d)=>s+d.qty,0);
+    const f2qty = data.filter(d=>d.f==='2공장').reduce((s,d)=>s+d.qty,0);
+    evalText = `<b>${f.item}</b> 총 <b>${totalQty}개</b> (${totalCount}건). 1공장 <b>${f1qty}개</b> · 2공장 <b>${f2qty}개</b>.<br>최다 신청 부서: <b>${topDept[0]}</b>(${topDept[1]}건)`;
+    trendText = `최대 신청월 <b>${peakEntry[0]||topItem[0]||'−'}</b> · 신청 부서 <b>${deptCount}개</b>`;
+  } else {
+    evalText = `커피믹스 총 <b>${totalBox}box (${totalT.toLocaleString()}T)</b> 소비. 1공장이 2공장 대비 약 <b>${ratio}배</b> 높은 소모량.<br>원두커피는 2공장(<b>${wonduF2}pack</b>)이 1공장(<b>${wonduF1}pack</b>)보다 ${wonduF1>0?(wonduF2/wonduF1).toFixed(1):'−'}배 높아 공장별 음료 선호도 차이 뚜렷.`;
+    trendText = `커피믹스 최대 신청월 <b>${peakEntry[0]||'−'}</b>(<b>${peakEntry[1]}box · ${peakEntry[1]*210}T</b>) · 신청 부서 <b>${deptCount}개</b> · 최다 품목 <b>${topItem[0]}</b>(${topItem[1]}개)`;
+  }
+
+  document.getElementById('insight-bar').innerHTML=`
+    <div class="insight-item">
+      <div class="itag">📌 소모량 평가${ctxLabel?' <span style="font-weight:400;opacity:.75;font-size:10px">— '+ctxLabel+'</span>':''}</div>
+      <div class="itext">${evalText}</div>
+    </div>
+    <div class="insight-item">
+      <div class="itag">📈 트렌드</div>
+      <div class="itext">${trendText}</div>
+    </div>
+  `;
+}
+
+// ========== COFFEE T TABLE ==========
+function renderCoffeeT(data){
+  const coffee = data.filter(d=>d.item.includes('커피믹스'));
+  const monthMap={};
+  coffee.forEach(d=>{
+    const ym=getYM(d.date);
+    if(!monthMap[ym]) monthMap[ym]={f1:0,f2:0};
+    if(d.f==='1공장') monthMap[ym].f1+=d.qty;
+    else monthMap[ym].f2+=d.qty;
+  });
+  const months=Object.keys(monthMap).sort((a,b)=>b.localeCompare(a));
+  let html=''; let tf1=0,tf2=0;
+  months.forEach(m=>{
+    const v=monthMap[m];
+    tf1+=v.f1; tf2+=v.f2;
+    const tot=v.f1+v.f2;
+    html+=`<tr>
+      <td>${m}</td>
+      <td>${v.f1||'-'}</td><td>${v.f1?(v.f1*210).toLocaleString()+'T':'-'}</td>
+      <td>${v.f2||'-'}</td><td>${v.f2?(v.f2*210).toLocaleString()+'T':'-'}</td>
+      <td><b>${tot}</b></td><td><b>${(tot*210).toLocaleString()}T</b></td>
+    </tr>`;
+  });
+  const totBox=tf1+tf2;
+  html+=`<tr class="total-row">
+    <td>합 계</td>
+    <td>${tf1}</td><td>${(tf1*210).toLocaleString()}T</td>
+    <td>${tf2}</td><td>${(tf2*210).toLocaleString()}T</td>
+    <td>${totBox}</td><td>${(totBox*210).toLocaleString()}T</td>
+  </tr>`;
+  if(!months.length) html='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">데이터 없음</td></tr>';
+  document.getElementById('tbl-coffee').innerHTML=html;
+}
+
+// ========== RENDER NUMBERS ==========
+function renderKPI(data){
+  document.getElementById('kpi-total').textContent = data.length.toLocaleString();
+  document.getElementById('kpi-f1').textContent = data.filter(d=>d.f==='1공장').length.toLocaleString();
+  document.getElementById('kpi-f2').textContent = data.filter(d=>d.f==='2공장').length.toLocaleString();
+  document.getElementById('kpi-dept').textContent = new Set(data.map(d=>d.dept)).size;
+  document.getElementById('kpi-item').textContent = new Set(data.map(d=>getItemCat(d.item))).size;
+}
+
+function sumByCat(rows){
+  const r={'커피믹스':0,'원두커피':0,'종이컵':0,'종이컵(큰컵)':0,'기타':0};
+  rows.forEach(d=>{ const c=getItemCat(d.item); r[c]=(r[c]||0)+d.qty; });
+  return r;
+}
+
+function renderFactory(data){
+  const factories = ['1공장','2공장'];
+  let html=''; let totals={'커피믹스':0,'원두커피':0,'종이컵':0,'종이컵(큰컵)':0,'기타':0}; let totalCnt=0;
+  factories.forEach(fac=>{
+    const rows=data.filter(d=>d.f===fac);
+    if(!rows.length) return;
+    const s=sumByCat(rows);
+    Object.keys(totals).forEach(k=>totals[k]+=s[k]);
+    totalCnt+=rows.length;
+    html+=`<tr>
+      <td><span class="badge ${fac==='1공장'?'badge-f1':'badge-f2'}">${fac}</span></td>
+      <td>${rows.length}</td>
+      <td>${s['커피믹스']||'-'}</td><td>${s['원두커피']||'-'}</td>
+      <td>${s['종이컵']||'-'}</td><td>${s['종이컵(큰컵)']||'-'}</td><td>${s['기타']||'-'}</td>
+    </tr>`;
+  });
+  html+=`<tr class="total-row">
+    <td>합 계</td><td>${totalCnt}</td>
+    <td>${totals['커피믹스']||'-'}</td><td>${totals['원두커피']||'-'}</td>
+    <td>${totals['종이컵']||'-'}</td><td>${totals['종이컵(큰컵)']||'-'}</td><td>${totals['기타']||'-'}</td>
+  </tr>`;
+  document.getElementById('tbl-factory').innerHTML=html;
+}
+
+function renderDept(data){
+  const map={};
+  data.forEach(d=>{
+    const key=d.f+'||'+d.dept;
+    if(!map[key]) map[key]={f:d.f,dept:d.dept,rows:[]};
+    map[key].rows.push(d);
+  });
+  const entries=Object.values(map).sort((a,b)=>a.f.localeCompare(b.f)||a.dept.localeCompare(b.dept));
+  let html='';
+  entries.forEach(e=>{
+    const s=sumByCat(e.rows);
+    html+=`<tr>
+      <td><span class="badge ${e.f==='1공장'?'badge-f1':'badge-f2'}">${e.f}</span></td>
+      <td class="left">${e.dept}</td>
+      <td>${e.rows.length}</td>
+      <td>${s['커피믹스']||'-'}</td><td>${s['원두커피']||'-'}</td>
+      <td>${s['종이컵']||'-'}</td><td>${s['종이컵(큰컵)']||'-'}</td><td>${s['기타']||'-'}</td>
+    </tr>`;
+  });
+  if(!html) html='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">데이터 없음</td></tr>';
+  document.getElementById('tbl-dept').innerHTML=html;
+}
+
+function renderMonth(data){
+  const map={};
+  data.forEach(d=>{
+    const ym=getYM(d.date); const key=ym+'||'+d.f;
+    if(!map[key]) map[key]={ym,f:d.f,rows:[]};
+    map[key].rows.push(d);
+  });
+  const entries=Object.values(map).sort((a,b)=>b.ym.localeCompare(a.ym)||a.f.localeCompare(b.f));
+  let html='';
+  entries.forEach(e=>{
+    const s=sumByCat(e.rows);
+    html+=`<tr>
+      <td>${e.ym}</td>
+      <td><span class="badge ${e.f==='1공장'?'badge-f1':'badge-f2'}">${e.f}</span></td>
+      <td>${e.rows.length}</td>
+      <td>${s['커피믹스']||'-'}</td><td>${s['원두커피']||'-'}</td>
+      <td>${s['종이컵']||'-'}</td><td>${s['종이컵(큰컵)']||'-'}</td><td>${s['기타']||'-'}</td>
+    </tr>`;
+  });
+  if(!html) html='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">데이터 없음</td></tr>';
+  document.getElementById('tbl-month').innerHTML=html;
+}
+
+function renderItem(data){
+  const itemMap={};
+  data.forEach(d=>{
+    const cat=getItemCat(d.item);
+    if(!itemMap[cat]) itemMap[cat]={f1:0,f2:0,unit:d.unit};
+    if(d.f==='1공장') itemMap[cat].f1+=d.qty;
+    else itemMap[cat].f2+=d.qty;
+  });
+  const order=['커피믹스','원두커피','종이컵','종이컵(큰컵)','기타'];
+  let html=''; let tf1=0,tf2=0;
+  order.forEach(k=>{
+    if(!itemMap[k]) return;
+    const v=itemMap[k];
+    tf1+=v.f1; tf2+=v.f2;
+    html+=`<tr><td class="left">${k}</td><td>${v.unit}</td><td>${v.f1||'-'}</td><td>${v.f2||'-'}</td><td><b>${(v.f1+v.f2)||'-'}</b></td></tr>`;
+  });
+  html+=`<tr class="total-row"><td>합 계</td><td>-</td><td>${tf1}</td><td>${tf2}</td><td>${tf1+tf2}</td></tr>`;
+  if(!Object.keys(itemMap).length) html='<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">데이터 없음</td></tr>';
+  document.getElementById('tbl-item').innerHTML=html;
+}
+
+function renderDetail(data){
+  const sorted=[...data].sort((a,b)=>b.date.localeCompare(a.date)||a.f.localeCompare(b.f));
+  let html='';
+  sorted.forEach(d=>{
+    html+=`<tr>
+      <td><span class="badge ${d.f==='1공장'?'badge-f1':'badge-f2'}">${d.f}</span></td>
+      <td>${d.date}</td><td class="left">${d.dept}</td>
+      <td>${d.writer||''}</td><td>${d.item}</td><td>${d.qty}</td><td>${d.unit}</td>
+    </tr>`;
+  });
+  if(!html) html='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">데이터 없음</td></tr>';
+  document.getElementById('tbl-detail').innerHTML=html;
+}
+
+// ========== CHARTS ==========
+Chart.register(ChartDataLabels);
+let charts = {};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+const BLUE = '#2563b0';
+const ORANGE = '#ea580c';
+const GREEN = '#16a34a';
+const PURPLE = '#7c3aed';
+const COLORS = ['#2563b0','#ea580c','#16a34a','#7c3aed','#dc2626','#0891b2','#b45309','#64748b'];
+
+// ── 그라데이션 헬퍼 ──
+function mkGrad(chart, c1, c2){
+  const {ctx, chartArea} = chart;
+  if(!chartArea) return c2;
+  const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+  g.addColorStop(0, c1); g.addColorStop(1, c2); return g;
+}
+function mkHGrad(chart, c1, c2){
+  const {ctx, chartArea} = chart;
+  if(!chartArea) return c1;
+  const g = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+  g.addColorStop(0, c1); g.addColorStop(1, c2); return g;
+}
+function lightenHex(hex, amt=70){
+  const n = parseInt(hex.replace('#',''), 16);
+  const r=Math.min(255,(n>>16)+amt), g=Math.min(255,((n>>8)&0xff)+amt), b=Math.min(255,(n&0xff)+amt);
+  return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+// 스택 바 색상 쌍 [밝은색, 진한색]
+const STACK_PAIRS = [
+  ['#7ab8f8','#1a4fa3'],
+  ['#5dd49e','#0f7a3a'],
+  ['#f8b87a','#b04800'],
+  ['#c49cf8','#5a1aa8'],
+];
+
+// 도넛 팔레트 (진행감 있는 5색)
+const DONUT_COLORS = ['#1d4ed8','#0284c7','#059669','#9333ea','#ea580c'];
+
+function renderCharts(data){
+  renderMonthlyChart(data);
+  renderDeptChart(data);
+  renderItemChart(data);
+  renderFactoryChart(data);
+  renderF1MonthlyChart(data.filter(d=>d.f==='1공장'));
+  renderF2MonthlyChart(data.filter(d=>d.f==='2공장'));
+}
+
+function allMonths(data){
+  return [...new Set(data.map(d=>getYM(d.date)))].sort();
+}
+
+function renderMonthlyChart(data){
+  destroyChart('monthly');
+  const months = allMonths(data);
+  const f1 = months.map(m=>data.filter(d=>d.f==='1공장'&&getYM(d.date)===m).length);
+  const f2 = months.map(m=>data.filter(d=>d.f==='2공장'&&getYM(d.date)===m).length);
+  charts['monthly'] = new Chart(document.getElementById('chartMonthly'),{
+    type:'bar',
+    data:{
+      labels: months,
+      datasets:[
+        {label:'1공장', data:f1,
+         backgroundColor: ctx=>mkGrad(ctx.chart, lightenHex(BLUE), BLUE),
+         borderColor:BLUE, borderWidth:1, borderRadius:5},
+        {label:'2공장', data:f2,
+         backgroundColor: ctx=>mkGrad(ctx.chart, lightenHex(ORANGE), ORANGE),
+         borderColor:ORANGE, borderWidth:1, borderRadius:5},
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:22, right:8}},
+      plugins:{
+        legend:{position:'top'},
+        tooltip:{mode:'index', intersect:false},
+        datalabels:{
+          anchor:'end', align:'top', offset:2,
+          color:'#444', font:{size:10, weight:'bold'},
+          formatter: v => v > 0 ? v : ''
+        }
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{maxRotation:45, minRotation:0, autoSkip:true, maxTicksLimit:16}},
+        y:{beginAtZero:true, ticks:{stepSize:1}}
+      }
+    }
+  });
+}
+
+function renderDeptChart(data){
+  destroyChart('dept');
+  const deptMap={};
+  data.forEach(d=>{ deptMap[d.dept]=(deptMap[d.dept]||0)+1; });
+  const entries = Object.entries(deptMap).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const maxVal = entries[0]?entries[0][1]:1;
+  charts['dept'] = new Chart(document.getElementById('chartDept'),{
+    type:'bar',
+    data:{
+      labels: entries.map(e=>e[0]),
+      datasets:[{
+        label:'신청 건수',
+        data: entries.map(e=>e[1]),
+        backgroundColor: ctx => mkHGrad(ctx.chart,
+          lightenHex(COLORS[ctx.dataIndex % COLORS.length], 80),
+          COLORS[ctx.dataIndex % COLORS.length]),
+        borderRadius:5
+      }]
+    },
+    options:{responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      layout:{padding:{right:36, top:4}},
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          anchor:'end', align:'right', offset:4,
+          color:'#333', font:{size:10, weight:'bold'},
+          formatter: v => v > 0 ? v : ''
+        }
+      },
+      scales:{
+        x:{beginAtZero:true, max: Math.ceil(maxVal*1.25), ticks:{stepSize:1}, grid:{display:false}},
+        y:{grid:{display:false}, ticks:{font:{size:11}}}
+      }
+    }
+  });
+}
+
+function renderItemChart(data){
+  destroyChart('item');
+  const itemMap={};
+  data.forEach(d=>{ const c=getItemCat(d.item); itemMap[c]=(itemMap[c]||0)+d.qty; });
+  const entries = Object.entries(itemMap).sort((a,b)=>b[1]-a[1]);
+  charts['item'] = new Chart(document.getElementById('chartItem'),{
+    type:'doughnut',
+    data:{
+      labels: entries.map(e=>e[0]),
+      datasets:[{
+        data: entries.map(e=>e[1]),
+        backgroundColor: DONUT_COLORS.slice(0, entries.length),
+        borderWidth:3, borderColor:'#fff', hoverOffset:10
+      }]
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      layout:{padding:18},
+      plugins:{
+        legend:{position:'bottom', labels:{padding:14, font:{size:12}}},
+        tooltip:{callbacks:{label: ctx=>`${ctx.label}: ${ctx.parsed}개`}},
+        datalabels:{
+          color:'#fff', font:{size:10, weight:'bold'},
+          textShadowBlur:4, textShadowColor:'rgba(0,0,0,0.45)',
+          anchor:'center', align:'center',
+          formatter:(v, ctx)=>{
+            const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+            const pct = total>0 ? Math.round(v/total*100) : 0;
+            return pct > 7 ? `${ctx.chart.data.labels[ctx.dataIndex]}\n${v}개(${pct}%)` : '';
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderFactoryChart(data){
+  destroyChart('factory');
+  const cats = ['커피믹스','원두커피','종이컵','종이컵(큰컵)'];
+  const f1 = cats.map(c=>data.filter(d=>d.f==='1공장'&&getItemCat(d.item)===c).reduce((s,d)=>s+d.qty,0));
+  const f2 = cats.map(c=>data.filter(d=>d.f==='2공장'&&getItemCat(d.item)===c).reduce((s,d)=>s+d.qty,0));
+  charts['factory'] = new Chart(document.getElementById('chartFactory'),{
+    type:'bar',
+    data:{
+      labels: cats,
+      datasets:[
+        {label:'1공장', data:f1,
+         backgroundColor: ctx=>mkGrad(ctx.chart, lightenHex(BLUE), BLUE), borderRadius:5},
+        {label:'2공장', data:f2,
+         backgroundColor: ctx=>mkGrad(ctx.chart, lightenHex(ORANGE), ORANGE), borderRadius:5},
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:24, right:8}},
+      plugins:{
+        legend:{position:'top'},
+        datalabels:{
+          anchor:'end', align:'top', offset:2,
+          color:'#444', font:{size:11, weight:'bold'},
+          formatter: v => v > 0 ? v : ''
+        }
+      },
+      scales:{x:{grid:{display:false}}, y:{beginAtZero:true}}
+    }
+  });
+}
+
+function renderF1MonthlyChart(data){
+  destroyChart('f1m');
+  const months = allMonths(data);
+  const cats = ['커피믹스','원두커피','종이컵','종이컵(큰컵)'];
+  charts['f1m'] = new Chart(document.getElementById('chartF1Monthly'),{
+    type:'bar',
+    data:{
+      labels: months,
+      datasets: cats.map((c,i)=>({
+        label: c,
+        data: months.map(m=>data.filter(d=>getYM(d.date)===m&&getItemCat(d.item)===c).reduce((s,d)=>s+d.qty,0)),
+        backgroundColor: ctx=>mkGrad(ctx.chart, STACK_PAIRS[i][0], STACK_PAIRS[i][1]),
+        borderRadius:2,
+      }))
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:4}},
+      plugins:{
+        legend:{position:'top'},
+        datalabels:{
+          color:'#fff', font:{size:9, weight:'bold'},
+          textShadowBlur:2, textShadowColor:'rgba(0,0,0,0.5)',
+          formatter: v => v > 0 ? v : '',
+          display: ctx => ctx.dataset.data[ctx.dataIndex] >= 2
+        }
+      },
+      scales:{
+        x:{stacked:true, grid:{display:false}, ticks:{maxRotation:45, autoSkip:true, maxTicksLimit:14}},
+        y:{stacked:true, beginAtZero:true}
+      }
+    }
+  });
+}
+
+function renderF2MonthlyChart(data){
+  destroyChart('f2m');
+  const months = allMonths(data);
+  const cats = ['커피믹스','원두커피','종이컵','종이컵(큰컵)'];
+  charts['f2m'] = new Chart(document.getElementById('chartF2Monthly'),{
+    type:'bar',
+    data:{
+      labels: months,
+      datasets: cats.map((c,i)=>({
+        label: c,
+        data: months.map(m=>data.filter(d=>getYM(d.date)===m&&getItemCat(d.item)===c).reduce((s,d)=>s+d.qty,0)),
+        backgroundColor: ctx=>mkGrad(ctx.chart, STACK_PAIRS[i][0], STACK_PAIRS[i][1]),
+        borderRadius:2,
+      }))
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:4}},
+      plugins:{
+        legend:{position:'top'},
+        datalabels:{
+          color:'#fff', font:{size:9, weight:'bold'},
+          textShadowBlur:2, textShadowColor:'rgba(0,0,0,0.5)',
+          formatter: v => v > 0 ? v : '',
+          display: ctx => ctx.dataset.data[ctx.dataIndex] >= 2
+        }
+      },
+      scales:{
+        x:{stacked:true, grid:{display:false}, ticks:{maxRotation:45, autoSkip:true, maxTicksLimit:14}},
+        y:{stacked:true, beginAtZero:true}
+      }
+    }
+  });
+}
+
+
+// ========== KPI CARD CLICK ==========
+function setKpiActive(type) {
+  ['all','f1','f2','dept','item'].forEach(t => {
+    const el = document.getElementById('kpi-card-' + t);
+    if(el) el.classList.toggle('active', t === type);
+  });
+}
+
+function kpiClick(type) {
+  setKpiActive(type);
+
+  if(type === 'all') {
+    // 전체 초기화 (필터 바도 동기화)
+    ['filterFactory','filterYear','filterMonth','filterDept','filterItem']
+      .forEach(id => document.getElementById(id).value = 'all');
+    applyFilters();
+    window.scrollTo({top:0, behavior:'smooth'});
+    return;
+  }
+  if(type === 'f1') {
+    document.getElementById('filterFactory').value = '1공장';
+    ['filterYear','filterMonth','filterDept','filterItem']
+      .forEach(id => document.getElementById(id).value = 'all');
+    applyFilters();
+    return;
+  }
+  if(type === 'f2') {
+    document.getElementById('filterFactory').value = '2공장';
+    ['filterYear','filterMonth','filterDept','filterItem']
+      .forEach(id => document.getElementById(id).value = 'all');
+    applyFilters();
+    return;
+  }
+  if(type === 'dept') {
+    const section = document.getElementById('tbl-dept').closest('.table-section');
+    section.scrollIntoView({behavior:'smooth', block:'start'});
+    section.classList.add('section-highlight');
+    setTimeout(() => section.classList.remove('section-highlight'), 1400);
+    renderInsight(filteredData);
+    return;
+  }
+  if(type === 'item') {
+    const section = document.getElementById('tbl-item').closest('.table-section');
+    section.scrollIntoView({behavior:'smooth', block:'start'});
+    section.classList.add('section-highlight');
+    setTimeout(() => section.classList.remove('section-highlight'), 1400);
+    renderInsight(filteredData);
+    return;
+  }
+}
+
+// ========== MASTER RENDER ==========
+function renderAll(){
+  renderInsight(filteredData);
+  renderCoffeeT(filteredData);
+  renderKPI(rawData);          // KPI는 항상 전체 데이터 기준 (필터 무관)
+  renderFactory(filteredData);
+  renderDept(filteredData);
+  renderMonth(filteredData);
+  renderItem(filteredData);
+  renderDetail(filteredData);
+  renderCharts(filteredData);
+}
+
+// ========== TAB ==========
+function switchTab(name, btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='chart') setTimeout(()=>renderCharts(filteredData),50);
+}
+
+// ========== INIT ==========
+initDropdowns();
+renderAll();
+document.getElementById('kpi-card-all').classList.add('active');
+</script>
+</body>
+</html>
